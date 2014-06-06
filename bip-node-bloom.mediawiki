@@ -1,0 +1,59 @@
+<pre>
+  BIP: bip-petertodd-node-bloom
+  Title: NODE_BLOOM Service Bit
+  Author: Peter Todd <pete@petertodd.org
+  Status: Draft
+  Type: Standards Track
+  Created: 2014-06-06
+</pre>
+
+==Abstract==
+
+This BIP extends [[bip-0037.mediawiki|BIP 37]], Connection Bloom filtering, by
+defining a service bit to allow peers to advertise that they support bloom
+filters explicitly.
+
+
+==Motivation==
+
+BIP 37 did not specify a service bit for the bloom filter service, thus
+implicitly assuming that all nodes that serve peers data support it. There are
+however cases where a node may want to provide data, such as mempool
+transactions and blocks, but do not want to or have not implemented bloom
+filters. For instance a node may be disk IO constrained but not bandwidth
+constrained, or may have dropped support for bloom filters in favor of a future
+filter technology.
+
+
+==Specification==
+
+The following service bit is added:
+
+<code>NODE_BLOOM = (1 << 1)</code>
+
+In addition the protocol version is increased from 70002 to 70003 in the
+reference implementation. Nodes that support bloom filters should set that
+protocol bit. Otherwise it should remain unset.
+
+If a node does not support bloom filters but receives a
+<code>filterload</code>, <code>filteradd</code>, or <code>filterclear</code>
+message from a peer the node should disconnect that peer immediately.
+
+While outside the scope of this BIP it is suggested that DNS seeds and other
+peer discovery mechanisms support the ability to specify the services required;
+existing implementations currently only check that NODE_NETWORK is set.
+
+
+==Design Rational==
+
+The protocol version is increased for backwards compatibility. Nodes that
+require the bloom filter service can treat NODE_BLOOM as set for peers
+advertising a protocol version less than 70003, allowing the rest of the
+implementation to be unchanged. Disconnecting peers immediately ensures we do
+not waste their incoming bandwidth and lets them quickly find another node to
+connect to.
+
+
+==Copyright==
+
+This document is placed in the public domain.
