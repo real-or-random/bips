@@ -1,0 +1,18 @@
+<pre>
+  BIP: 63
+  Title: Stealth Addresses
+  Author: Peter Todd <pete@petertodd.org>
+  Status: Draft
+  Type: Standards Track
+  Created: 2012-07-30
+</pre>
+
+==Abstract==
+
+==Motivation==
+
+==Specification==
+
+==Copyright==
+
+This document is placed in the public domain.
