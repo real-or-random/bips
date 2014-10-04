@@ -18,7 +18,7 @@ some point in the future.
 
 CHECKLOCKTIMEVERIFY re-defines the existing NOP2 opcode. When executed it
 compares the top item on the stack to the nLockTime field of the transaction
-containing the scriptSig. If that top stack item is greater than the transation
+containing the scriptSig. If that top stack item is greater than the transaction
 nLockTime the script fails immediately, otherwise script evaluation continues
 as though a NOP was executed.
 
