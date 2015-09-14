@@ -26,7 +26,7 @@ change being rolled out at once, requiring coordination between proposals, and
 does not allow for permanent rejection: as long as one soft fork is not fully
 rolled out, no future one can be scheduled.
 
-In addition, BIP 34 made the integer comparison (nVersion >= 2) a consensus
+In addition, BIP 34 made the signed integer comparison (nVersion >= 2) a consensus
 rule after its 95% threshold was reached, removing 2<sup>31</sup>+2 values from
 the set of valid version numbers (all negative numbers, as nVersion is
 interpreted as a signed integer, as well as 0 and 1). This indicates another
@@ -50,9 +50,7 @@ nVersion to 1 in their blocks.
 The highest 3 bits are set to 001, so the range of actually possible nVersion
 values is [0x20000000...0x3FFFFFFF], inclusive. This leaves two future upgrades
 for different mechanisms (top bits 010 and 011), while complying to the
-constraints set by BIP34 and BIP66. Having more than 29 available bits for
-parallel soft forks does not add anything anyway, as the (nVersion >= 3)
-requirement already makes that impossible.
+constraint set by BIP 66 that nVersion >= 3.
 
 '''States'''
 With every softfork proposal we associate a state BState, which begins
