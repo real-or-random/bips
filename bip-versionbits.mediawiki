@@ -14,7 +14,7 @@ This document specifies a proposed change to the semantics of the 'version' fiel
 
 BIP 34 introduced a mechanism for doing soft-forking changes without predefined flag timestamp (or flag block height), instead relying on measuring miner support indicated by a higher version number in block headers. As it relies on comparing version numbers as integers however, it only supports one single change being rolled out at once, requiring coordination between proposals, and does not allow for permanent rejection: as long as one soft fork is not fully rolled out, no future one can be scheduled.
 
-In addition, BIP 34 made the integer comparison (nVersion >= 2) a consensus rule after its 95% threshold was reached, removing 2<sup>31</sup>+2 values from the set of valid version numbers (all negative numbers, as nVersion is interpreted as a signed integer, as well as 0 and 1). This indicates another downside this approach: every upgrade permanently restricts the set of allowed nVersion field values. This approach was later reused in BIP 66, which further removed nVersion = 2 as valid option. As will be shown further, this is unnecessary. 
+In addition, BIP 34 made the integer comparison (nVersion >= 2) a consensus rule after its 95% threshold was reached, removing 2<sup>31</sup>+2 values from the set of valid version numbers (all negative numbers, as nVersion is interpreted as a signed integer, as well as 0 and 1). This indicates another downside this approach: every upgrade permanently restricts the set of allowed nVersion field values. This approach was later reused in BIP 66, which further removed nVersion = 2 as valid option. As will be shown further, this is unnecessary.
 
 ==Specification==
 
@@ -55,7 +55,7 @@ more of the 2016 blocks within a retarget period, it is considered
 '''Success: Activation Delay'''
 The consensus rules related to ''locked-in'' soft fork will be enforced in
 the second retarget period; ie. there is a one retarget period in
-which the remaining 5% can upgrade.  At the that activation block and
+which the remaining 5% can upgrade.  At the activation block and
 after, the bit B may be reused for a different soft fork.
 
  <nowiki>if (BState == locked-in && NextBlockHeight == BActiveHeight) {
