@@ -18,7 +18,7 @@ Some of the disabled opcodes could be useful, but unfortunately it is impossible
 Under the witness program version byte system, it is possible to introduce completely novel scripting system with a softfork. The new semantics will be confined to a particular version of witness program without affecting any existing scripting system. As part of Merkelized Abstract Syntax Tree (BIP114) softfork, this BIP will:
 
 #re-enable <code>CAT</code>, <code>SUBSTR</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>INVERT</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>LSHIFT</code>, and <code>RSHIFT</code>;
-#introduce new opcodes: <code>DUPTOALTSTACK</code>, <code>DUPFROMALTSTACK</code>, <code>SWAPSTACK</code>, and <code>SWAPCAT</code>;
+#introduce new opcodes: <code>DUPTOALTSTACK</code>, <code>DUPFROMALTSTACK</code>, <code>SWAPSTACK</code>, <code>SWAPCAT</code>, and <code>RESIZE</code>;
 #defines expandable opcodes for future softforks of stack manipulating opcodes: <code>EXPAND1</code> to <code>EXPAND32</code>.
 
 
@@ -45,13 +45,15 @@ In the following, x<sub>n</sub> represents the top-n item on the stack. For exam
 
 <code>RSHIFT</code> will remove the top two stack items. The x<sub>2</sub>, interpreted as a little-endian string, will be right-shifted by x<sub>1</sub> bits and the result (with any trailing zero byte removed) is pushed onto the stack. For example, if x<sub>2</sub> is 0xbeef00 (0b101111101110111100000000) and x<sub>1</sub> is 11, the result is 0x1d (0b00011101). The script will fail if the stack has less then two items or x<sub>1</sub> is negative.
 
+<code>RESIZE</code> will remove the top two stack items. The x<sub>2</sub> will be resized to x<sub>1</sub> bytes and pushed onto the stack. Zero-padding or truncation will be made at the right hand side. For example, if x<sub>2</sub> is 0xdeadbeef, x<sub>1</sub> = 6 will return 0xdeadbeef0000, x<sub>1</sub> = 4 will return 0xdeadbeef, x<sub>1</sub> = 2 will return 0xdead, and x<sub>1</sub> = 0 will return a null string. The script will fail if the stack has less than two items, or x<sub>1</sub> is negative, or x<sub>1</sub> is greater than TBD.
+
 <code>DUPTOALTSTACK</code> will copy the top main stack item onto the top of the alt stack. The main stack is not modified.
 
 <code>DUPFROMALTSTACK</code> will copy the top alt stack item onto the top of the main stack. The alt stack is not modified.
 
 <code>SWAPSTACK</code> will swap main stack and alt stack.
 
-<code>EXPAND1</code> to <code>EXPAND32</code>, when executed, will remove all items in the stack and leave a single TRUE value, terminate the script evaluation and return a success immediately.
+<code>EXPAND1</code> to <code>EXPAND32</code>, when executed, will remove all items in the stack and leave a single TRUE value, terminate the script evaluation and return a success immediately. They are reserved for future softfork of new opcodes.
 
 The following scripts will pass:
 
@@ -68,7 +70,49 @@ The following scripts will fail:
   0 IF EXPAND1 ELSE RETURN ENDIF (EXPAND1 is in an unexecuted branch)
   0 IF VERIF ELSE EXPAND1 ENDIF (VERIF is executed even in an unexecuted branch)
 
+== Examples ==
 
+=== Signing with a pre-specified k value ===
+
+ DUP <2> <R-length + 2> SUBSTR <0x02|R-length|R> EQUALVERIFY <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
+
+
+  SIZE <R-length + 1> ADD <0x30> SWAPCAT <0x02|R-length|R> CAT SWAPCAT <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
+  "24h" CHECKSEQUENCEVERIFY DROP <Alice key> CHECKSIG
+
+  <Bob sig> <0x02|S-length|S|sighashtype>
+
+
+  <Bob sig> <0x02|S-length|S|sighashtype>                                           SIZE
+  <Bob sig> <0x02|S-length|S|sighashtype> <S-length + 3>                            <R-length + 1>
+  <Bob sig> <0x02|S-length|S|sighashtype> <S-length + 3> <R-length + 1>             ADD
+  <Bob sig> <0x02|S-length|S|sighashtype> <Total length>                            <0x03>
+  <Bob sig> <0x02|S-length|S|sighashtype> <Total length> <0x03>                     SWAPCAT
+  <Bob sig> <0x02|S-length|S|sighashtype> <0x03|Total length>                       <0x02|R-length|R>
+  <Bob sig> <0x02|S-length|S|sighashtype> <0x03|Total length> <0x02|R-length|R>     CAT
+  <Bob sig> <0x02|S-length|S|sighashtype> <0x03|Total length|0x02|R-length|R>       SWAPCAT
+  <Bob sig> <0x03|Total length|0x02|R-length|R|0x02|S-length|S|sighashtype>         <X pubkey>
+  <Bob sig> <X sig> <X pubkey>                                                      CHECKSIGVERIFY
+  <Bob sig>                                                                         <Bob pubkey>
+  <Bob sig> <Bob pubkey>                                                            CHECKSIG
+  <1>
+
+
+
+
+=== Betting ===
+
+  HASH160 <Secret-A hash 160> EQUALVERIFY <Pubkey-A> CHECKSIG
+  "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-B> CHECKSIG
+
+  HASH160 <Secret-B hash 160> EQUALVERIFY <Pubkey-B> CHECKSIG
+  "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-A> CHECKSIG
+
+  DUP HASH160 <Secret-B hash 160> EQUALVERIFY DUP HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT VERIFY <Pubkey-A> CHECKSIG
+  DUP HASH160 <Secret-B hash 160> EQUALVERIFY DUP HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT NOT VERIFY <Pubkey-B> CHECKSIG
+  <Pubkey-B> CHECKSIGVERIFY <Pubkey-A> CHECKSIG
+
+  <Sig-B> <Secret-A> <Secret-B>
 
 
 == Backward compatibility ==
