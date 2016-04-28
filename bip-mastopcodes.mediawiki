@@ -11,41 +11,41 @@
 This BIP defines the scripting system in Merkelized Abstract Syntax Tree (BIP114). It re-enables some of the previously disabled opcodes, introduces new opcodes, and defines expandable opcodes for future extension.
 
 ==Motivation==
-Bitcoin uses a script system to specify the conditions for redemption of transaction outputs. It is composed of 186 opcodes, each represented by an one-byte unsigned integer from 0x00 to 0xb9. Since the first release of Bitcoin in 2009, 19 opcodes including  <code>VER</code>, <code>VERIF</code>, <code>VERNOTIF</code>,<code>RETURN</code>,  <code>CAT</code>, <code>SUBSTR</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>INVERT</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>2MUL</code>, <code>2DIV</code>, <code>MUL</code>, <code>DIV</code>, <code>MOD</code>, <code>LSHIFT</code>, and <code>RSHIFT</code>, were disabled due to security reasons. Executing a disabled opcode will terminate the script evaluation immediately and return a failure.
+Bitcoin uses a script system to specify the conditions for redemption of transaction outputs. It is composed of 186 opcodes, each represented by an one-byte unsigned integer from <code>0x00</code> to <code>0xb9</code>. Since the first release of Bitcoin in 2009, 19 opcodes including  <code>VER</code>, <code>VERIF</code>, <code>VERNOTIF</code>, <code>RETURN</code>, <code>CAT</code>, <code>SUBSTR</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>INVERT</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>2MUL</code>, <code>2DIV</code>, <code>MUL</code>, <code>DIV</code>, <code>MOD</code>, <code>LSHIFT</code>, and <code>RSHIFT</code>, were disabled due to security reasons. Presence of a disabled opcode will terminate the script evaluation immediately and return a failure (even in an unexecuted conditional branch).
 
-Some of the disabled opcodes could be useful, but unfortunately it is impossible to re-enable these in the original scripting system with a softfork. It is also not possible to introduce new stack-manipulating opcodes to the original system with a softfork. For example, new opcodes including CHECKLOCKTIMEVERIFY (BIP65) and CHECKSEQUENCEVERIFY (BIP112) could either return a failure immediately, or do nothing.
+Some of the disabled opcodes could be useful, but unfortunately it is impossible to re-enable these in the original scripting system with a softfork. It is also not possible to introduce new stack-manipulating opcodes to the original system with a softfork. For example, new opcodes including <code>CHECKLOCKTIMEVERIFY</code> (BIP65) and <code>CHECKSEQUENCEVERIFY</code> (BIP112) could either return a failure immediately, or do nothing, and are usually followed by an <code>DROP</code> to clean up the stack.
 
-Under the witness program version byte system, it is possible to introduce completely novel scripting system with a softfork. The new semantics will be confined to a particular version of witness program without affecting any existing scripting system. As part of Merkelized Abstract Syntax Tree (BIP114) softfork, this BIP will:
+Under the witness program version byte system, it is now possible to introduce completely novel scripting system with a softfork. The new semantics will be confined to a particular version of witness program without affecting any existing scripting system. As part of Merkelized Abstract Syntax Tree (BIP114) softfork, this BIP will:
 
 #re-enable <code>CAT</code>, <code>SUBSTR</code>, <code>LEFT</code>, <code>RIGHT</code>, <code>INVERT</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>LSHIFT</code>, and <code>RSHIFT</code>;
-#introduce new opcodes: <code>DUPTOALTSTACK</code>, <code>DUPFROMALTSTACK</code>, <code>SWAPSTACK</code>, <code>SWAPCAT</code>, and <code>RESIZE</code>;
-#defines expandable opcodes for future softforks of stack manipulating opcodes: <code>EXPAND1</code> to <code>EXPAND32</code>.
+#introduce new opcodes: <code>DUPTOALTSTACK (0xba)</code>, <code>DUPFROMALTSTACK (0xbb)</code>, <code>SWAPSTACK (0xbc)</code>, <code>SWAPCAT (0xbd)</code>, and <code>RESIZE (0xbe)</code>;
+#define expandable opcodes for future softforks of stack manipulating opcodes: <code>EXPAND1 (0xd0)</code> to <code>EXPAND32 (0xef)</code>.
 
 
 ==Specification==
 In the following, x<sub>n</sub> represents the top-n item on the stack. For example, x<sub>1</sub> is the top stack item, and x<sub>2</sub> is the second-to-top item.
 
-<code>CAT</code> (0x7e) and <code>SWAPCAT</code> (0xbd) will remove the top two stack items and push the concantenated string onto the stack. If x<sub>2</sub> is "abcd" and x<sub>1</sub> is "efgh", <code>CAT</code> will return "abcdefgh" while <code>SWAPCAT</code> will return "efghabcd". The script will fail if the stack has less than two items or the total size of the concantenated string is bigger than TBD bytes.
+<code>CAT</code> and <code>SWAPCAT</code> will remove the top two stack items and push the concantenated string onto the stack. If x<sub>2</sub> is "abcd" and x<sub>1</sub> is "efgh", <code>CAT</code> will return "abcdefgh" while <code>SWAPCAT</code> will return "efghabcd". The script will fail if the stack has less than two items or the total size of the concantenated string is bigger than TBD bytes.
 
-<code>SUBSTR</code> will remove the top three stack items and push a substring of x<sub>3</sub> onto the stack, with x<sub>2</sub> as the starting position, and x<sub>1</sub> as the length of the substring. For example, if x<sub>3</sub> is "abcdefghij", x<sub>2</sub> is 3 and x<sub>3</sub> is 4, the returned string is "defg". The script will fail if the stack has less then three items, x<sub>2</sub> or x<sub>3</sub> is negative, x<sub>2</sub> is not smaller than the size of x<sub>1</sub>, and x<sub>2</sub> + x<sub>3</sub> is bigger than the size of x<sub>1</sub>.
+<code>SUBSTR</code> will remove the top three stack items and push a substring of x<sub>3</sub> onto the stack, with x<sub>2</sub> as the starting position, and x<sub>1</sub> as the length of the substring. For example, if x<sub>3</sub> is "abcdefghij", x<sub>2</sub> is 3 and x<sub>1</sub> is 4, the returned string is "defg". The script will fail if the stack has less then three items, x<sub>2</sub> or x<sub>3</sub> is negative, x<sub>2</sub> is not smaller than the size of x<sub>1</sub>, and x<sub>2</sub> + x<sub>3</sub> is bigger than the size of x<sub>1</sub>.
 
-<code>LEFT</code> will remove the top two stack items and push the x<sub>1</sub> leftmost characters of x<sub>2</sub> onto the stack. For example, if x<sub>2</sub> is "abcdefghij", x<sub>1</sub> is 6, the returned string is "abcdef". A null is returned if x<sub>1</sub> is 0, and x<sub>2</sub> is returned if x<sub>1</sub> is not smaller than the size of x<sub>2</sub>. The script will fail if the stack has less than two items or x<sub>1</sub> is negative.
+<code>LEFT</code> will remove the top two stack items and push the x<sub>1</sub> leftmost characters of x<sub>2</sub> onto the stack. For example, if x<sub>2</sub> is "abcdefghij" and x<sub>1</sub> is 6, the returned string is "abcdef". An empty vector is returned if x<sub>1</sub> is 0, and x<sub>2</sub> is returned if x<sub>1</sub> is not smaller than the size of x<sub>2</sub>. The script will fail if the stack has less than two items or x<sub>1</sub> is negative.
 
-<code>RIGHT</code> will remove the top two stack items and push the x<sub>1</sub> rightmost characters of x<sub>2</sub> onto the stack. For example, if x<sub>2</sub> is "abcdefghij", x<sub>1</sub> is 6, the returned string is "efghij". x<sub>2</sub> is returned if x<sub>1</sub> is 0, and a null is returned if x<sub>1</sub> is not smaller than the size of x<sub>2</sub>. The script will fail if the stack has less than two items or x<sub>1</sub> is negative.
+<code>RIGHT</code> will remove the top two stack items and push the x<sub>2</sub> with the x<sub>1</sub> leftmost characters removed onto the stack. For example, if x<sub>2</sub> is "abcdefghij" and x<sub>1</sub> is 6, the returned string is "ghij". x<sub>2</sub> is returned if x<sub>1</sub> is 0, and an empty vector is returned if x<sub>1</sub> is not smaller than the size of x<sub>2</sub>. The script will fail if the stack has less than two items or x<sub>1</sub> is negative.
 
 <code>INVERT</code> will flip the bits of the top stack item. For example, 0xbeef (0b1011111011101111) will become 0x4110 (0b0100000100010000). The script will fail if the stack is empty.
 
 <code>AND</code>, <code>OR</code>, <code>XOR</code> will remove the top two stack items and push the boolean and, or, xor of the two values onto the stack, respectively. For example, if the values are 0xdead (0b1101111010101101) and 0xbeef (0b1011111011101111):
- *<code>AND</code>will return 0x9ead (0b1001111010101101),
- *<code>OR</code>will return 0xfeef (0b1111111011101111),
- *<code>XOR</code>will return 0x6042 (0b0110000001000010).
- The script will fail if the stack has less then two items or the size of the top two items are not the same.
+*<code>AND</code>will return 0x9ead (0b1001111010101101),
+*<code>OR</code>will return 0xfeef (0b1111111011101111),
+*<code>XOR</code>will return 0x6042 (0b0110000001000010).
+The script will fail if the stack has less then two items or the size of the top two items are not the same.
 
- <code>LSHIFT</code> will remove the top two stack items. The x<sub>2</sub>, interpreted as a little-endian string, will be left-shifted by x<sub>1</sub> bits and the result (with any trailing zero byte removed) is pushed onto the stack. For example, if x<sub>2</sub> is 0xbeef00 (0b101111101110111100000000) and x<sub>1</sub> is 11, the result is 0x00f07d07 (0b00000000111100000111110100000111). The script will fail if the stack has less then two items, or x<sub>1</sub> is negative, or size of the result (before removal of trailing zero) is larger than TBD bytes.
+<code>LSHIFT</code> will remove the top two stack items. The x<sub>2</sub>, interpreted as a little-endian string, will be left-shifted by x<sub>1</sub> bits and the result (with most significant zero bytes removed) is pushed onto the stack. For example, if x<sub>2</sub> is 0xbeef00 (0b101111101110111100000000) and x<sub>1</sub> is 11, the result is 0x00f07d07 (0b00000000111100000111110100000111). The script will fail if the stack has less then two items, or x<sub>1</sub> is negative, or size of the result is potentially larger than TBD bytes.
 
-<code>RSHIFT</code> will remove the top two stack items. The x<sub>2</sub>, interpreted as a little-endian string, will be right-shifted by x<sub>1</sub> bits and the result (with any trailing zero byte removed) is pushed onto the stack. For example, if x<sub>2</sub> is 0xbeef00 (0b101111101110111100000000) and x<sub>1</sub> is 11, the result is 0x1d (0b00011101). The script will fail if the stack has less then two items or x<sub>1</sub> is negative.
+<code>RSHIFT</code> will remove the top two stack items. The x<sub>2</sub>, interpreted as a little-endian string, will be right-shifted by x<sub>1</sub> bits and the result (with most significant zero bytes removed) is pushed onto the stack. For example, if x<sub>2</sub> is 0xbeef00 (0b101111101110111100000000) and x<sub>1</sub> is 11, the result is 0x1d (0b00011101). The script will fail if the stack has less then two items or x<sub>1</sub> is negative.
 
-<code>RESIZE</code> will remove the top two stack items. The x<sub>2</sub> will be resized to x<sub>1</sub> bytes and pushed onto the stack. Zero-padding or truncation will be made at the right hand side. For example, if x<sub>2</sub> is 0xdeadbeef, x<sub>1</sub> = 6 will return 0xdeadbeef0000, x<sub>1</sub> = 4 will return 0xdeadbeef, x<sub>1</sub> = 2 will return 0xdead, and x<sub>1</sub> = 0 will return a null string. The script will fail if the stack has less than two items, or x<sub>1</sub> is negative, or x<sub>1</sub> is greater than TBD.
+<code>RESIZE</code> will remove the top two stack items. The x<sub>2</sub> will be resized to x<sub>1</sub> bytes and pushed onto the stack. Zero-padding or truncation will be made at the right hand side. For example, if x<sub>2</sub> is 0xdeadbeef, x<sub>1</sub> = 6 will return 0xdeadbeef0000, x<sub>1</sub> = 4 will return 0xdeadbeef, x<sub>1</sub> = 2 will return 0xdead, and x<sub>1</sub> = 0 will return an empty vector. The script will fail if the stack has less than two items, or x<sub>1</sub> is negative, or x<sub>1</sub> is greater than TBD.
 
 <code>DUPTOALTSTACK</code> will copy the top main stack item onto the top of the alt stack. The main stack is not modified.
 
@@ -63,26 +63,30 @@ The following scripts will pass:
   EXPAND1 RETURN (the script passes before RETURN is executed)
   EXPAND1 VERIF (the script passes before VERIF is executed)
   0 IF RETURN ELSE EXPAND1 ENDIF (RETURN is in an unexecuted branch)
+  0 IF RETURN ELSE EXPAND1  (IF without ENDIF, EXPAND1 executed)
 
 The following scripts will fail:
 
   RETURN EXPAND1 (script failed before EXPAND1 is executed)
   0 IF EXPAND1 ELSE RETURN ENDIF (EXPAND1 is in an unexecuted branch)
   0 IF VERIF ELSE EXPAND1 ENDIF (VERIF is executed even in an unexecuted branch)
+  0 IF EXPAND1 ELSE 1  (IF without ENDIF, EXPAND1 not executed)
 
 == Examples ==
 
 === Signing with a pre-specified k value ===
+It has been proposed that an opcode verifying a pair of private and public key could be useful for improving the privacy of payment networks and facilitating cross-blockchain transactions.<ref>https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2016-February/012436.html</ref><ref>http://lists.linuxfoundation.org/pipermail/bitcoin-dev/2015-November/011827.html</ref> The same effect could be archived with <code>CAT</code> re-enabled. For example, Bob has the private key X. Alice would like to pay Bob some bitcoins for this private key. They will agree to a random secret nonce <code>k</code>, and calculate <code>R</code>, in the same way as signing a transaction. Alice will pay to the following MAST script:
 
- DUP <2> <R-length + 2> SUBSTR <0x02|R-length|R> EQUALVERIFY <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
+  Branch 1: SIZE <R-length + 1> ADD <0x30> SWAPCAT <0x02|R-length|R> CAT SWAPCAT <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
+  Branch 2: "24h" CHECKSEQUENCEVERIFY DROP <Alice key> CHECKSIG
 
-
-  SIZE <R-length + 1> ADD <0x30> SWAPCAT <0x02|R-length|R> CAT SWAPCAT <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
-  "24h" CHECKSEQUENCEVERIFY DROP <Alice key> CHECKSIG
+Bob has to redeem the output within 24 hours using the following signature:
 
   <Bob sig> <0x02|S-length|S|sighashtype>
 
+The script will be evaluated as:
 
+  Stack:                                                                            Operation:
   <Bob sig> <0x02|S-length|S|sighashtype>                                           SIZE
   <Bob sig> <0x02|S-length|S|sighashtype> <S-length + 3>                            <R-length + 1>
   <Bob sig> <0x02|S-length|S|sighashtype> <S-length + 3> <R-length + 1>             ADD
@@ -97,38 +101,59 @@ The following scripts will fail:
   <Bob sig> <Bob pubkey>                                                            CHECKSIG
   <1>
 
+With k, S and sighash, Alice (and only Alice) can recover the private key X with the well-known k-reuse exploit.<ref>https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm</ref>
 
+It may also be done using <code>SUBSTR</code>, but is less space efficient:
 
+ DUP <2> <R-length + 2> SUBSTR <0x02|R-length|R> EQUALVERIFY <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
 
-=== Betting ===
+=== Trust-free betting ===
+Alice and Bob would like to bet against each other without third party arbitration. Each of them will generate a secret nonce (Secret-A and Secret-B respectively). In one funding transaction, they will create the following outputs, each contributing 2.1BTC:
 
-  HASH160 <Secret-A hash 160> EQUALVERIFY <Pubkey-A> CHECKSIG
-  "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-B> CHECKSIG
+  Output 1 (1.1BTC)
+  Branch 1: HASH160 <Secret-A hash 160> EQUALVERIFY <Pubkey-A> CHECKSIG
+  Branch 2: "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-B> CHECKSIG
 
-  HASH160 <Secret-B hash 160> EQUALVERIFY <Pubkey-B> CHECKSIG
-  "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-A> CHECKSIG
+  Output 2 (1.1BTC)
+  Branch 1: HASH160 <Secret-B hash 160> EQUALVERIFY <Pubkey-B> CHECKSIG
+  Branch 2: "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-A> CHECKSIG
 
-  DUP HASH160 <Secret-B hash 160> EQUALVERIFY DUP HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT VERIFY <Pubkey-A> CHECKSIG
-  DUP HASH160 <Secret-B hash 160> EQUALVERIFY DUP HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT NOT VERIFY <Pubkey-B> CHECKSIG
-  <Pubkey-B> CHECKSIGVERIFY <Pubkey-A> CHECKSIG
+  Output 3 (2 BTC)
+  Branch 1: 2DUP HASH160 <Secret-B hash 160> EQUALVERIFY HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT VERIFY <Pubkey-A> CHECKSIG
+  Branch 2: 2DUP HASH160 <Secret-B hash 160> EQUALVERIFY HASH160 <Secret-A hash 160> EQUALVERIFY HASH256 SWAP HASH256 XOR <255> RSHIFT NOT VERIFY <Pubkey-B> CHECKSIG
+  Branch 3: <Pubkey-B> CHECKSIGVERIFY <Pubkey-A> CHECKSIG
+
+Before signing the funding transaction, they will sign a refund transaction using the Branch 3 of Output 3, with a relative lock-time of 48 hours, paying 1 BTC to each.
+
+After the funding transaction is confirmed, they have to reveal the secret nonce within 24 hours.
+
+Based on the secret nonce, only one of the Branch 1 and 2 in Output 3 could be valid. If Bob is the winner, he will redeem the Branch 2 of Output 3 using the following signature within 48 hours:
 
   <Sig-B> <Secret-A> <Secret-B>
 
+Alice and Bob will also redeem his/her 1.1 BTC in Output 1 and Output 2 within 24 hours, using the following signatures:
+
+  <Sig-A> <Secret-A>
+  <Sig-B> <Secret-B>
+
+If either one becomes uncooperative and fails to reveal the secret within 24 hours, the other one will be able to redeem totally 2.2 BTC from Output 1 and Output 2, and get the 1 BTC refund from Output 3 after 48 hours. The collateral makes sure that any rational player must be cooperative, without the need of third pary arbitration. Unlimited number of bets may be done inside a payment channel and only the final balance will be recorded in the blockchain.
 
 == Backward compatibility ==
-As a soft fork, older software will continue to operate without modification. Non-upgraded nodes, however, will consider MAST programs as anyone-can-spend scripts. Wallets should always be wary of anyone-can-spend scripts and treat them with suspicion.
+As a soft fork, older software will continue to operate without modification while not be able to use any of the new opcodes. Non-upgraded nodes, however, will consider MAST programs as anyone-can-spend scripts. Wallets should always be wary of anyone-can-spend scripts and treat them with suspicion.
 
 == Deployment ==
-This BIP depends on [[bip-0141.mediawiki|BIP141]] and will be deployed by version-bits [[bip-0009.mediawiki|BIP9]] after BIP141 is enforced. Exact details TBD.
+This BIP should be deployed with [[bip-0114.mediawiki|BIP114]] using version-bits [[bip-0009.mediawiki|BIP9]]. Exact details TBD.
 
 == Credits ==
-The idea of MAST originates from Russell O’Connor, Pieter Wuille, and [https://bitcointalk.org/index.php?topic=255145.msg2757327#msg2757327 Peter Todd].
+Re-enabled opcodes were mostly implemented by the Elements Project: https://www.elementsproject.org/
 
 == Reference Implementation ==
-
+https://github.com/jl2012/bitcoin/tree/segwit_mast
 
 == References ==
-
+*[[bip-0141.mediawiki|BIP141 Segregated Witness (Consensus layer)]]
+*[[bip-0114.mediawiki|BIP114 Merkelized Abstract Syntax Tree]]
+<references />
 
 == Copyright ==
 This document is placed in the public domain.
