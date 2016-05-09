@@ -108,13 +108,13 @@ It may also be done using <code>SUBSTR</code>, but is less space efficient:
  DUP <2> <R-length + 2> SUBSTR <0x02|R-length|R> EQUALVERIFY <X pubkey> CHECKSIGVERIFY <Bob pubkey> CHECKSIG
 
 === Trust-free betting ===
-Alice and Bob would like to bet against each other without third party arbitration. Each of them will generate a secret nonce (Secret-A and Secret-B respectively). In one funding transaction, they will create the following outputs, each contributing 2.1BTC:
+Alice and Bob would like to bet against each other without third party arbitration. Each of them will generate a secret nonce (Secret-A and Secret-B respectively). In one funding transaction, they will create the following outputs, each contributing 1.1 BTC:
 
-  Output 1 (1.1BTC)
+  Output 1 (1.1 BTC)
   Branch 1: HASH160 <Secret-A hash 160> EQUALVERIFY <Pubkey-A> CHECKSIG
   Branch 2: "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-B> CHECKSIG
 
-  Output 2 (1.1BTC)
+  Output 2 (1.1 BTC)
   Branch 1: HASH160 <Secret-B hash 160> EQUALVERIFY <Pubkey-B> CHECKSIG
   Branch 2: "24h" CHECKSEQUENCEVERIFY DROP <Pubkey-A> CHECKSIG
 
