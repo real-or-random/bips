@@ -112,9 +112,9 @@ Input:
 * The public keys ''pk<sub>1..u</sub>'': ''u'' 33-byte arrays
 * The messages ''m<sub>1..u</sub>'': ''u'' 32-byte arrays
 * The signatures ''sig<sub>1..u</sub>'': ''u'' 64-byte arrays
-* Random numbers ''a<sub>2...u</sub>'' in the range ''1...n-1'': ''u-1'' integers. These can either be generated deterministically using a [https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator CSPRNG] seeded by a cryptographic hash (e.g., SHA256) of all the other inputs, or be randomly generated independently for each batch of verifications.
 
 All provided signatures are valid with overwhelming probability if and only if the algorithm below does not fail.
+* Generate ''u-1'' random integers ''a<sub>2...u</sub>'' in the range ''1...n-1''. These can either be generated deterministically using a [https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator CSPRNG] seeded by a cryptographic hash (e.g., SHA256) of all inputs of the algorithm, or be randomly generated independently for each run of the batch verification algorithm.
 * For ''i = 1 .. u'':
 ** Let ''P<sub>i</sub> = point(pk<sub>i</sub>)''; fail if ''point(pk<sub>i</sub>)'' fails.
 ** Let ''r = int(sig<sub>i</sub>[0:32])''; fail if ''r &ge; p''.
