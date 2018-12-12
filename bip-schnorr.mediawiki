@@ -40,7 +40,7 @@ encodings and operations.
 === Design ===
 
 '''Schnorr signature variant''' Elliptic Curve Schnorr signatures for message ''m'' and public key ''P'' generally involve a point ''R'', integers ''e'' and ''s'' picked by the signer, and generator ''G'' which satisfy ''e = H(R || m)'' and ''sG = R + eP''. Two formulations exist, depending on whether the signer reveals ''e'' or ''R'':
-# Signatures are ''(e,s)'' that satisfy ''e = H(sG - eP || m)''. This avoids the difficulty of encoding a point ''R'' in the signature.
+# Signatures are ''(e,s)'' that satisfy ''e = H(sG - eP || m)''. This avoids minor complexity introduced by the encoding of the point ''R'' in the signature (see paragraphs "Encoding the sign of R" and "Implicit Y coordinate" further below in this subsection).
 # Signatures are ''(R,s)'' that satisfy ''sG = R + H(R || m)P''. This supports batch validation, as there are no elliptic curve operations inside the hashes.
 
 We choose the ''R''-option to support batch validation.
