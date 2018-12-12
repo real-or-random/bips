@@ -105,7 +105,7 @@ The signature is valid if and only if the algorithm below does not fail.
 * Let ''R = sG - eP''.
 * Fail if ''infinite(R)'' or ''jacobi(y(R)) &ne; 1'' or ''x(R) &ne; r''.
 
-==== Batch verification ====
+==== Batch Verification ====
 
 Input:
 * The number ''u'' of signatures
@@ -178,7 +178,7 @@ These can for example be used in [https://github.com/jonasnick/scriptless-script
 
 While the traditional Schnorr blind signatures are vulnerable to [http://www.enseignement.polytechnique.fr/profs/informatique/Francois.Morain/Master1/Crypto/projects/Wagner02.pdf Wagner's attack], there are [https://www.math.uni-frankfurt.de/~dmst/teaching/SS2012/Vorlesung/EBS5.pdf a number of mitigations] which allow them to be usable in practice without any known attacks. Nevertheless, more analysis is required to be confident about the security of the blind signature scheme.
 
-== Test vectors and reference code ==
+== Test Vectors and Reference Code ==
 
 For development and testing purposes, we provide a [[bip-schnorr/test-vectors.csv|collection of test vectors in CSV format]] and a naive but highly inefficient and non-constant time [[bip-schnorr/reference.py|pure Python 3.7 reference implementation of the signing and verification algorithm]].
 The reference implementation is for demonstration purposes only and not to be used in production environments.
