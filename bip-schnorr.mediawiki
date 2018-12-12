@@ -11,8 +11,8 @@ This document is licensed under the 2-clause BSD license.
 ===Motivation===
 
 Bitcoin has traditionally used
-[https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm ECDSA] signatures over the secp256k1 curve for authenticating
-transactions. These are [http://www.secg.org/sec2-v2.pdf standardized], but have a number of downsides
+[https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm ECDSA] signatures over the [http://www.secg.org/sec2-v2.pdf secp256k1 curve] for authenticating
+transactions. These are [http://www.secg.org/sec1-v2.pdf standardized], but have a number of downsides
 compared to [https://en.wikipedia.org/wiki/Schnorr_signature Schnorr signatures] over the same curve:
 
 * '''Security proof''': The security of Schnorr signatures is easily [https://www.di.ens.fr/~pointche/Documents/Papers/2000_joc.pdf provable] in the random oracle model assuming the elliptic curve discrete logarithm problem (ECDLP) is hard. Such a proof does not exist for ECDSA.
@@ -25,7 +25,7 @@ propose a new standard, a number of improvements not specific to Schnorr signatu
 made:
 
 * '''Signature encoding''': Instead of [https://en.wikipedia.org/wiki/X.690#DER_encoding DER]-encoding for signatures (which are variable size, and up to 72 bytes), we can use a simple fixed 64-byte format.
-* '''Batch validation''': The specific formulation of ECDSA signatures that is standardized cannot be validated more efficiently in batch compared to individually, unless additional witness data is added. Changing the signature scheme offers an opportunity to avoid this.
+* '''Batch verification''': The specific formulation of ECDSA signatures that is standardized cannot be verified more efficiently in batch compared to individually, unless additional witness data is added. Changing the signature scheme offers an opportunity to avoid this.
 
 [[File:bip-schnorr/speedup-batch.png|frame|This graph shows the ratio between the time it takes to verify ''n'' signatures individually and to verify a batch of ''n'' signatures. This ratio goes up logarithmically with the number of signatures, or in other words: the total time to verify ''n'' signatures grows with ''O(n / log n)''.]]
 
@@ -40,21 +40,21 @@ encodings and operations.
 === Design ===
 
 '''Schnorr signature variant''' Elliptic Curve Schnorr signatures for message ''m'' and public key ''P'' generally involve a point ''R'', integers ''e'' and ''s'' picked by the signer, and generator ''G'' which satisfy ''e = H(R || m)'' and ''sG = R + eP''. Two formulations exist, depending on whether the signer reveals ''e'' or ''R'':
-# Signatures are ''(e,s)'' that satisfy ''e = H(sG - eP || m)''. This avoids the difficulty of encoding a point ''R'' in the signature.
-# Signatures are ''(R,s)'' that satisfy ''sG = R + H(R || m)P''. This supports batch validation, as there are no elliptic curve operations inside the hashes.
+# Signatures are ''(e,s)'' that satisfy ''e = H(sG - eP || m)''. This avoids minor complexity introduced by the encoding of the point ''R'' in the signature (see paragraphs "Encoding the sign of R" and "Implicit Y coordinate" further below in this subsection).
+# Signatures are ''(R,s)'' that satisfy ''sG = R + H(R || m)P''. This supports batch verification, as there are no elliptic curve operations inside the hashes.
 
-We choose the ''R''-option to support batch validation.
+We choose the ''R''-option to support batch verification.
 
-'''Key prefixing''' When using the validation rule above directly, it is possible for a third party to convert a signature ''(R,s)'' for key ''P'' into a signature ''(R,s + aH(R || m))'' for key ''P + aG'' and the same message, for any integer ''a''. This is not a concern for Bitcoin currently, as all signature hashes indirectly commit to the public keys. However, this may change with proposals such as SIGHASH_NOINPUT ([https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki BIP 118]), or when the signature scheme is used for other purposes&mdash;especially in combination with schemes like [https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP32]'s unhardened derivation. To combat this, we choose ''key prefixed''<ref>A limitation of committing to the public key (rather than to a short hash of it, or not at all) is that it removes the ability for public key recovery or verifying signatures against a short public key hash. These constructions are generally incompatible with batch validation.</ref> Schnorr signatures; changing the equation to ''sG = R + H(R || P || m)P''.
+'''Key prefixing''' When using the verification rule above directly, it is possible for a third party to convert a signature ''(R,s)'' for key ''P'' into a signature ''(R,s + aH(R || m))'' for key ''P + aG'' and the same message, for any integer ''a''. This is not a concern for Bitcoin currently, as all signature hashes indirectly commit to the public keys. However, this may change with proposals such as SIGHASH_NOINPUT ([https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki BIP 118]), or when the signature scheme is used for other purposes&mdash;especially in combination with schemes like [https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP32]'s unhardened derivation. To combat this, we choose ''key prefixed''<ref>A limitation of committing to the public key (rather than to a short hash of it, or not at all) is that it removes the ability for public key recovery or verifying signatures against a short public key hash. These constructions are generally incompatible with batch verification.</ref> Schnorr signatures; changing the equation to ''sG = R + H(R || P || m)P''.
 
 '''Encoding the sign of R''' As we chose the ''R''-option above, we're required to encode the point ''R'' into the signature. Several possibilities exist:
 # Encoding the full X and Y coordinate of R, resulting in a 96-byte signature.
 # Encoding the full X coordinate, but only whether Y is even or odd (like compressed public keys). This would result in 65-byte signatures.
 # Encoding only the X coordinate, leaving us with 64-byte signature.
 
-Using the first option would be slightly more efficient for validation (around 5%), but we prioritize compactness, and therefore choose option 3.
+Using the first option would be slightly more efficient for verification (around 5%), but we prioritize compactness, and therefore choose option 3.
 
-'''Implicit Y coordinate''' In order to support batch validation, the Y coordinate of ''R'' cannot be ambiguous (every valid X coordinate has two possible Y coordinates). We have a choice between several options for symmetry breaking:
+'''Implicit Y coordinate''' In order to support batch verification, the Y coordinate of ''R'' cannot be ambiguous (every valid X coordinate has two possible Y coordinates). We have a choice between several options for symmetry breaking:
 # Implicitly choosing the Y coordinate that is in the lower half.
 # Implicitly choosing the Y coordinate that is even<ref>Since ''p'' is odd, negation modulo ''p'' will map even numbers to odd numbers and the other way around. This means that for a valid X coordinate, one of the corresponding Y coordinates will be even, and the other will be odd.</ref>.
 # Implicitly choosing the Y coordinate that is a quadratic residue (has a square root modulo the field size)<ref>A product of two numbers is a quadratic residue when either both or none of the factors are quadratic residues. As ''-1'' is not a quadratic residue, and the two Y coordinates corresponding to a given X coordinate are each other's negation, this means exactly one of the two must be a quadratic residue.</ref>.
@@ -105,16 +105,16 @@ The signature is valid if and only if the algorithm below does not fail.
 * Let ''R = sG - eP''.
 * Fail if ''infinite(R)'' or ''jacobi(y(R)) &ne; 1'' or ''x(R) &ne; r''.
 
-==== Batch verification ====
+==== Batch Verification ====
 
 Input:
 * The number ''u'' of signatures
 * The public keys ''pk<sub>1..u</sub>'': ''u'' 33-byte arrays
 * The messages ''m<sub>1..u</sub>'': ''u'' 32-byte arrays
 * The signatures ''sig<sub>1..u</sub>'': ''u'' 64-byte arrays
-* Random numbers ''a<sub>2...u</sub>'' in the range ''1...n-1'': ''u-1'' integers. These can either be generated deterministically using a [https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator CSPRNG] seeded by a cryptographic hash (e.g., SHA256) of all the other inputs, or be randomly generated independently for each batch of verifications.
 
 All provided signatures are valid with overwhelming probability if and only if the algorithm below does not fail.
+* Generate ''u-1'' random integers ''a<sub>2...u</sub>'' in the range ''1...n-1''. These can either be generated deterministically using a [https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator CSPRNG] seeded by a cryptographic hash (e.g., SHA256) of all inputs of the algorithm, or be randomly generated independently for each run of the batch verification algorithm.
 * For ''i = 1 .. u'':
 ** Let ''P<sub>i</sub> = point(pk<sub>i</sub>)''; fail if ''point(pk<sub>i</sub>)'' fails.
 ** Let ''r = int(sig<sub>i</sub>[0:32])''; fail if ''r &ge; p''.
@@ -148,7 +148,7 @@ Many techniques are known for optimizing elliptic curve implementations. Several
 
 '''Jacobi symbol''' The function ''jacobi(x)'' is defined as above, but can be computed more efficiently using an [https://en.wikipedia.org/wiki/Jacobi_symbol#Calculating_the_Jacobi_symbol extended GCD algorithm].
 
-'''Jacobian coordinates''' Elliptic Curve operations can be implemented more efficiently by using [https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates Jacobian coordinates]. Elliptic Curve operations implemented this way avoid many intermediate modular inverses (which are computationally expensive), and the scheme proposed in this document is in fact designed to not need any inversions at all for validation. When operating on a point ''P'' with Jacobian coordinates ''(x,y,z)'' which is not the point at infinity and for which ''x(P)'' is defined as ''x / z<sup>2</sup>'' and ''y(P)'' is defined as ''y / z<sup>3</sup>'':
+'''Jacobian coordinates''' Elliptic Curve operations can be implemented more efficiently by using [https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates Jacobian coordinates]. Elliptic Curve operations implemented this way avoid many intermediate modular inverses (which are computationally expensive), and the scheme proposed in this document is in fact designed to not need any inversions at all for verification. When operating on a point ''P'' with Jacobian coordinates ''(x,y,z)'' which is not the point at infinity and for which ''x(P)'' is defined as ''x / z<sup>2</sup>'' and ''y(P)'' is defined as ''y / z<sup>3</sup>'':
 * ''jacobi(y(P))'' can be implemented as ''jacobi(yz mod p)''.
 * ''x(P) &ne; r'' can be implemented as ''x &ne; z<sup>2</sup>r mod p''.
 
@@ -167,7 +167,7 @@ Further, by combining Schnorr signatures with [https://link.springer.com/content
 
 [https://download.wpsoftware.net/bitcoin/wizardry/mw-slides/2018-05-18-l2/slides.pdf Adaptor signatures] can be produced by a signer by offsetting his public nonce with a known point ''T = tG'', but not offsetting his secret nonce.
 A correct signature (or partial signature, as individual signers' contributions to a multisignature are called) on the same message with same nonce will then be equal to the adaptor signature offset by ''t'', meaning that learning ''t'' is equivalent to learning a correct signature.
-This can be used to enable atomic swaps or even [https://eprint.iacr.org/2018/472 general payment channels] in which the atomicity of disjoint transactions is ensured using the signatures themselves, rather than Bitcoin script support. The resulting transactions will appear to validators to be no different from ordinary single-signer transactions, except perhaps for the inclusion of locktime refund logic.
+This can be used to enable atomic swaps or even [https://eprint.iacr.org/2018/472 general payment channels] in which the atomicity of disjoint transactions is ensured using the signatures themselves, rather than Bitcoin script support. The resulting transactions will appear to verifiers to be no different from ordinary single-signer transactions, except perhaps for the inclusion of locktime refund logic.
 
 Adaptor signatures, beyond the efficiency and privacy benefits of encoding script semantics into constant-sized signatures, have additional benefits over traditional hash-based payment channels. Specifically, the secret values ''t'' may be reblinded between hops, allowing long chains of transactions to be made atomic while even the participants cannot identify which transactions are part of the chain. Also, because the secret values are chosen at signing time, rather than key generation time, existing outputs may be repurposed for different applications without recourse to the blockchain, even multiple times.
 
@@ -178,7 +178,7 @@ These can for example be used in [https://github.com/jonasnick/scriptless-script
 
 While the traditional Schnorr blind signatures are vulnerable to [https://www.iacr.org/archive/crypto2002/24420288/24420288.pdf Wagner's attack], there are [https://www.math.uni-frankfurt.de/~dmst/teaching/SS2012/Vorlesung/EBS5.pdf a number of mitigations] which allow them to be usable in practice without any known attacks. Nevertheless, more analysis is required to be confident about the security of the blind signature scheme.
 
-== Test vectors and reference code ==
+== Test Vectors and Reference Code ==
 
 For development and testing purposes, we provide a [[bip-schnorr/test-vectors.csv|collection of test vectors in CSV format]] and a naive but highly inefficient and non-constant time [[bip-schnorr/reference.py|pure Python 3.7 reference implementation of the signing and verification algorithm]].
 The reference implementation is for demonstration purposes only and not to be used in production environments.
