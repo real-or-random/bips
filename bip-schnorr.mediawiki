@@ -21,7 +21,7 @@ This document is licensed under the 2-clause BSD license.
 ===Motivation===
 
 Bitcoin has traditionally used
-[https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm ECDSA] signatures over the [http://www.secg.org/sec2-v2.pdf secp256k1 curve] for authenticating
+[https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm ECDSA] signatures over the [http://www.secg.org/sec2-v2.pdf secp256k1 curve] and with SHA256 hashes for authenticating
 transactions. These are [http://www.secg.org/sec1-v2.pdf standardized], but have a number of downsides
 compared to [https://en.wikipedia.org/wiki/Schnorr_signature Schnorr signatures] over the same curve:
 
@@ -40,7 +40,7 @@ made:
 
 [[File:bip-schnorr/speedup-batch.png|frame|This graph shows the ratio between the time it takes to verify ''n'' signatures individually and to verify a batch of ''n'' signatures. This ratio goes up logarithmically with the number of signatures, or in other words: the total time to verify ''n'' signatures grows with ''O(n / log n)''.]]
 
-By reusing the same curve as Bitcoin has used for ECDSA, we are able to retain existing mechanisms for choosing private and public keys, and we avoid introducing new assumptions about elliptic curve group security.
+By reusing the same curve and hash function as Bitcoin has used for ECDSA, we are able to retain existing mechanisms for choosing private and public keys, and we avoid introducing new assumptions about the security of elliptic curves and hash functions.
 
 == Description ==
 
@@ -50,13 +50,11 @@ encodings and operations.
 
 === Design ===
 
-'''Schnorr signature variant''' Elliptic Curve Schnorr signatures for message ''m'' and public key ''P'' generally involve a point ''R'', integers ''e'' and ''s'' picked by the signer, and generator ''G'' which satisfy ''e = hash(R || m)'' and ''sG = R + eP''. Two formulations exist, depending on whether the signer reveals ''e'' or ''R'':
-# Signatures are ''(e,s)'' that satisfy ''e = hash(sG - eP || m)''. This avoids minor complexity introduced by the encoding of the point ''R'' in the signature (see paragraphs "Encoding the sign of R" and "Implicit Y coordinate" further below in this subsection).
-# Signatures are ''(R,s)'' that satisfy ''sG = R + hash(R || m)P''. This supports batch verification, as there are no elliptic curve operations inside the hashes.
+'''Schnorr signature variant''' Elliptic Curve Schnorr signatures for message ''m'' and public key ''P'' generally involve a point ''R'', integers ''e'' and ''s'' picked by the signer, and generator ''G'' which satisfy ''e = hash(m || R)'' and ''sG = R + eP''. Two formulations exist, depending on whether the signer reveals ''e'' or ''R'':
+# Signatures are ''(e,s)'' that satisfy ''e = hash(m || sG - eP)''. This avoids minor complexity introduced by the encoding of the point ''R'' in the signature (see paragraphs "Encoding the sign of R" and "Implicit Y coordinate" further below in this subsection).
+# Signatures are ''(R,s)'' that satisfy ''sG = R + hash(m || R)P''. This supports batch verification, as there are no elliptic curve operations inside the hashes.
 
 We choose the ''R''-option to support batch verification.
-
-'''Key prefixing''' When using the verification rule above directly, it is possible for a third party to convert a signature ''(R,s)'' for key ''P'' into a signature ''(R,s + a⋅hash(R || m))'' for key ''P + aG'' and the same message, for any integer ''a''. This is not a concern for Bitcoin currently, as all signature hashes indirectly commit to the public keys. However, this may change with proposals such as SIGHASH_NOINPUT ([https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki BIP 118]), or when the signature scheme is used for other purposes&mdash;especially in combination with schemes like [https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP32]'s unhardened derivation. To combat this, we choose ''key prefixed''<ref>A limitation of committing to the public key (rather than to a short hash of it, or not at all) is that it removes the ability for public key recovery or verifying signatures against a short public key hash. These constructions are generally incompatible with batch verification.</ref> Schnorr signatures; changing the equation to ''sG = R + hash(R || P || m)P''.
 
 '''Encoding R and public key point P''' There exist several possibilities for encoding elliptic curve points:
 # Encoding the full X and Y coordinates of ''P'' and ''R'', resulting in a 64-byte public key and a 96-byte signature.
@@ -81,13 +79,18 @@ It is important to not mix up the 32-byte bip-schnorr public key format and othe
 
 Implicit Y coordinates are not a reduction in security when expressed as the number of elliptic curve operations an attacker is expected to perform to compute the secret key. An attacker can normalize any given public key to a point whose Y coordinate is a quadratic residue by negating the point if necessary. This is just a subtraction of field elements and not an elliptic curve operation.
 
-'''Tagged Hashes''' Cryptographic hash functions are used for multiple purposes in the specification below and in Bitcoin in general. To make sure hashes used in one context can't be reinterpreted in another one, hash functions can be tweaked with a context-dependent tag name, in such a way that collisions across contexts can be assumed to be infeasible. Such collisions obviously can not be ruled out completely, but only for schemes using tagging with a unique name. As for other schemes collisions are at least less likely with tagging than without.
+'''Key prefixing''' When using the verification rule above directly, it is possible for a third party to convert a signature ''(R,s)'' for key ''P'' into a signature ''(R,s + a⋅hash(m || R))'' for key ''P + aG'' and the same message, for any integer ''a''. This is not a concern for Bitcoin currently, as all signature hashes indirectly commit to the public keys. However, this may change with proposals such as SIGHASH_NOINPUT ([https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki BIP 118]), or when the signature scheme is used for other purposes&mdash;especially in combination with schemes like [https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP32]'s unhardened derivation. To combat this, we choose ''key-prefixed''<ref>A limitation of committing to the public key (rather than to a short hash of it, or not at all) is that it removes the ability for public key recovery or verifying signatures against a short public key hash. These constructions are generally incompatible with batch verification.</ref> Schnorr signatures; changing the equation to ''sG = R + hash(P || m ||R)P''.
+
+'''Order of inputs to the hash function'''
+The inputs ''P'', ''m'', and ''R'' to the hash function are all 32 bytes long. With the specific concatenation order ''P || m || R'', it is implied that ''P'' and ''m'' fall into the first 64-byte block processed by SHA256, whereas ''R'' (together with some padding introduced by SHA256) falls into the second 64-byte block. This is advantageous for signing, because ''P'' and ''m'' are typcially available at the beginning of the signing processs and may be available before the secret key is fetched, ensuring that the first SHA256 block can be processed in parallel to the computation of ''R'' or preprocessed. Moreover, this specific allocation of inputs to SHA256 blocks is potentially useful for higher-level protocols that rely on zero-knowledge proofs or secure multi-party computation involving the signature hash<ref>For example, a zero-knowledge proof for a statement of the form "I know a public key ''P'' and a message ''m'' such that a public signature ''(R,s)'' is valid for ''P'' and ''m''." needs to involve the processing of the first SHA256 block only instead of the full SHA256 evaluation, assuming it is acceptable to reveal the SHA256 midstate after the first block. As another example, a zero-knowledge proof for a statement of the form "A public value ''e'' is a hash constructed with a value ''R'' that has specific properties." needs to involve only the processing of the second block. Zero-knowledge proofs of the latter kind could potentially be useful in a construction of a secure blind Schnorr signature protocol (see Applications above) to convince the blind signer that the hash value is constructed properly.</ref>.
+
+'''Tagged hashes''' Cryptographic hash functions are used for multiple purposes in the specification below and in Bitcoin in general. To make sure hashes used in one context can't be reinterpreted in another one, hash functions can be tweaked with a context-dependent tag name, in such a way that collisions across contexts can be assumed to be infeasible. Such collisions obviously can not be ruled out completely, but only for schemes using tagging with a unique name. As for other schemes collisions are at least less likely with tagging than without.
 
 For example, without tagged hashing a bip-schnorr signature could also be valid for a signature scheme where the only difference is that the arguments to the hash function are reordered. Worse, if the bip-schnorr nonce derivation function was copied or independently created, then the nonce could be accidentally reused in the other scheme leaking the private key.
 
 This proposal suggests to include the tag by prefixing the hashed data with ''SHA256(tag) || SHA256(tag)''. Because this is a 64-byte long context-specific constant, optimized implementations are possible (identical to SHA256 itself, but with a modified initial state). Using SHA256 of the tag name itself is reasonably simple and efficient for implementations that don't choose to use the optimization.
 
-'''Final scheme''' As a result, our final scheme ends up using public key ''pk'' which is the X coordinate of a point ''P'' on the curve whose Y coordinate is a quadratic residue and signatures ''(r,s)'' where ''r'' is the X coordinate of a point ''R'' whose Y coordinate is a quadratic residue. The signature satisfies ''sG = R + tagged_hash(r || pk || m)P''.
+'''Final scheme''' As a result, our final scheme ends up using public key ''pk'' which is the X coordinate of a point ''P'' on the curve whose Y coordinate is a quadratic residue and signatures ''(r,s)'' where ''r'' is the X coordinate of a point ''R'' whose Y coordinate is a quadratic residue. The signature satisfies ''sG = R + tagged_hash(pk || m || r)P''.
 
 === Specification ===
 
@@ -107,7 +110,7 @@ The following convention is used, with constants as defined for secp256k1:
 ** ''||'' refers to byte array concatenation.
 ** The function ''x[i:j]'', where ''x'' is a byte array, returns a ''(j - i)''-byte array with a copy of the ''i''-th byte (inclusive) to the ''j''-th byte (exclusive) of ''x''.
 ** The function ''bytes(x)'', where ''x'' is an integer, returns the 32-byte encoding of ''x'', most significant byte first.
-** The function ''bytes(P)'', where ''P'' is a point, returns ''bytes(x(P))'.
+** The function ''bytes(P)'', where ''P'' is a point, returns ''bytes(x(P))''.
 ** The function ''int(x)'', where ''x'' is a 32-byte array, returns the 256-bit unsigned integer whose most significant byte encoding is ''x''.
 ** The function ''lift_x(x)'', where ''x'' is an integer in range ''0..p-1'', returns the point ''P'' for which ''x(P) = x'' and ''y(P)'' is a quadratic residue modulo ''p'', or fails if no such point exists<ref>Given an candidate X coordinate ''x'' in the range ''0..p-1'', there exist either exactly two or exactly zero valid Y coordinates. If no valid Y coordinate exists, then ''x'' is not a valid X coordinate either, i.e., no point ''P'' exists for which ''x(P) = x''.  Given a candidate ''x'', the valid Y coordinates are the square roots of ''c = x<sup>3</sup> + 7 mod p'' and they can be computed as ''y = &plusmn;c<sup>(p+1)/4</sup> mod p'' (see [https://en.wikipedia.org/wiki/Quadratic_residue#Prime_or_prime_power_modulus Quadratic residue]) if they exist, which can be checked by squaring and comparing with ''c''. Due to [https://en.wikipedia.org/wiki/Euler%27s_criterion Euler's criterion] it then holds that ''c<sup>(p-1)/2</sup> = 1 mod p''. The same criterion applied to ''y'' results in ''y<sup>(p-1)/2</sup> mod p = &plusmn;c<sup>((p+1)/4)((p-1)/2)</sup> mod p = &plusmn;1 mod p''. Therefore ''y = +c<sup>(p+1)/4</sup> mod p'' is a quadratic residue and ''-y mod p'' is not.</ref>. The function ''lift_x(x)'' is equivalent to the following pseudocode:
 *** Let ''c = x<sup>3</sup> + 7 mod p''.
