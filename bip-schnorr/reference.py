@@ -72,7 +72,7 @@ def schnorr_sign(msg, seckey0):
         raise RuntimeError('Failure. This happens only with negligible probability.')
     R = point_mul(G, k0)
     k = n - k0 if (jacobi(R[1]) != 1) else k0
-    e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(R) + bytes_from_point(P) + msg)) % n
+    e = int_from_bytes(tagged_hash("BIPSchnorr", bytes_from_point(P) + msg + bytes_from_point(R))) % n
     return bytes_from_point(R) + bytes_from_int((k + e * seckey) % n)
 
 def schnorr_verify(msg, pubkey, sig):
@@ -89,7 +89,7 @@ def schnorr_verify(msg, pubkey, sig):
     s = int_from_bytes(sig[32:64])
     if (r >= p or s >= n):
         return False
-    e = int_from_bytes(tagged_hash("BIPSchnorr", sig[0:32] + pubkey + msg)) % n
+    e = int_from_bytes(tagged_hash("BIPSchnorr", pubkey + msg + sig[0:32])) % n
     R = point_add(point_mul(G, s), point_mul(P, n - e))
     if R is None or jacobi(R[1]) != 1 or R[0] != r:
         return False
