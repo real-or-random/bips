@@ -147,7 +147,7 @@ The signature is valid if and only if the algorithm below does not fail.
 * Let ''P = point(pk)''; fail if ''point(pk)'' fails.
 * Let ''r = int(sig[0:32])''; fail if ''r &ge; p''.
 * Let ''s = int(sig[32:64])''; fail if ''s &ge; n''.
-* Let ''e = int(hash<sub>BIPSchnorr</sub>(bytes(r) || bytes(P) || m)) mod n''.
+* Let ''e = int(hash<sub>BIPSchnorr</sub>(bytes(P) || m || bytes(r)) mod n''.
 * Let ''R = sG - eP''.
 * Fail if ''infinite(R)''.
 * Fail if ''jacobi(y(R)) &ne; 1'' or ''x(R) &ne; r''.
@@ -166,7 +166,7 @@ All provided signatures are valid with overwhelming probability if and only if t
 ** Let ''P<sub>i</sub> = point(pk<sub>i</sub>)''; fail if ''point(pk<sub>i</sub>)'' fails.
 ** Let ''r = int(sig<sub>i</sub>[0:32])''; fail if ''r &ge; p''.
 ** Let ''s<sub>i</sub> = int(sig<sub>i</sub>[32:64])''; fail if ''s<sub>i</sub> &ge; n''.
-** Let ''e<sub>i</sub> = int(hash<sub>BIPSchnorr</sub>(bytes(r) || bytes(P<sub>i</sub>) || m<sub>i</sub>)) mod n''.
+** Let ''e<sub>i</sub> = int(hash<sub>BIPSchnorr</sub>(bytes(P<sub>i</sub>) || m<sub>i</sub> || bytes(r)) mod n''.
 ** Let ''R<sub>i</sub> = lift_x(r)''; fail if ''lift_x(r)'' fails.
 * Fail if ''(s<sub>1</sub> + a<sub>2</sub>s<sub>2</sub> + ... + a<sub>u</sub>s<sub>u</sub>)G &ne; R<sub>1</sub> + a<sub>2</sub>R<sub>2</sub> + ... + a<sub>u</sub>R<sub>u</sub> + e<sub>1</sub>P<sub>1</sub> + (a<sub>2</sub>e<sub>2</sub>)P<sub>2</sub> + ... + (a<sub>u</sub>e<sub>u</sub>)P<sub>u</sub>''.
 
@@ -185,7 +185,7 @@ To sign ''m'' for public key ''pubkey(sk)'':
 * Fail if ''k' = 0''.
 * Let ''R = k'G''.
 * Let ''k = k' '' if ''jacobi(y(R)) = 1'', otherwise let ''k = n - k' ''.
-* Let ''e = int(hash<sub>BIPSchnorr</sub>(bytes(R) || bytes(P) || m)) mod n''.
+* Let ''e = int(hash<sub>BIPSchnorr</sub>(bytes(P) || m || bytes(R)) mod n''.
 * The signature is ''bytes(R) || bytes((k + ed) mod n)''.
 
 '''Above deterministic derivation of ''R'' is designed specifically for this signing algorithm and may not be secure when used in other signature schemes.'''
