@@ -228,7 +228,7 @@ to create a 32-byte digest which can be passed to signing or verification
 (as for example done in [[bip-0341.mediawiki|BIP341]].)
 
 Since pre-hashing may not always be desirable,
-e.g., when actual messages are shorter than 32 bytes,<ref>Another reason to omit pre-hashing is to protect against certain types of cryptanalytic advances against the hash function used for pre-hashing: If pre-hashing is used, an attacker that can find collisions in the pre-hashing function can necessarily forge signatures under chosen-message attacks. If pre-hashing is not used, an attacker that can find collisions in SHA256 (as used inside the signature scheme) may not be able to forge signatures. However, this seeming advantage is mostly moot in the context Bitcoin, which already relies on collision resistance of SHA256 in other places, e.g., for transaction hashes.</ref>
+e.g., when actual messages are shorter than 32 bytes,<ref>Another reason to omit pre-hashing is to protect against certain types of cryptanalytic advances against the hash function used for pre-hashing: If pre-hashing is used, an attacker that can find collisions in the pre-hashing function can necessarily forge signatures under chosen-message attacks. If pre-hashing is not used, an attacker that can find collisions in SHA256 (as used inside the signature scheme) may not be able to forge signatures. However, this seeming advantage is mostly irrelevant in the context Bitcoin, which already relies on collision resistance of SHA256 in other places, e.g., for transaction hashes.</ref>
 the restriction to 32-byte messages has been lifted.
 We note that pre-hashing is recommended for performance reasons in applications that deal with large messages.
 If large messages are not pre-hashed,
@@ -236,6 +236,26 @@ the algorithms of the signature scheme will perform more hashing internally.
 In particular, the signing algorithm needs two sequential hashing passes over the message,
 which means that the full message must necessarily be kept in memory during signing,
 and large messages entail a runtime penalty.<ref>Typically, messages of 56 bytes or longer enjoy a performance benefit from pre-hashing, assuming the speed of SHA256 inside the signing algorithm matches that of the pre-hashing done by the calling application.</ref>
+
+==== Domain Separation ====
+
+It is good cryptographic practice to use a key pair only for a single purpose.
+Nevertheless, there may be situations in which it may be desirable to use the same key pair in multiple contexts,
+i.e., to sign different types of messages within the same application
+or even messages in entirely different applications
+(e.g., a secret key may be used to sign Bitcoin transactions as well plain text messages).
+
+As a consequence, applications should ensure that a signed application message intended for one context is never deemed valid in a different context
+(e.g., a signed plain text message should never be misinterpreted as a signed Bitcoin transaction, because this could cause unintended loss of funds).
+This is called "domain separation" and it is typically realized by partitioning the message space.
+Even if key pairs are intended to be used only within a single context,
+domain separation is a good idea because it makes it easy to add more contexts later.
+
+As a best practice, we recommend applications to use exactly one of the following methods to pre-process application messages before passing it to the signature scheme:
+* Either, pre-hash the application message using ''hash<sub>name</sub>'', where ''name'' identifies the context uniquely (e.g., "foo-app/signed-bar"),
+* or prefix the actual message with a 33-byte string that identifies the context uniquely (e.g., the UTF-8 encoding of "foo-app/signed-bar", padded with null bytes to 33 bytes).
+
+As the two pre-processing methods yield different message sizes (32 bytes vs. at least 33 bytes), there is no risk of collision between them.
 
 == Applications ==
 
