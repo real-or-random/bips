@@ -22,14 +22,29 @@
     "error_test_cases": [
         {
             "pnonce_indices": [0, 4],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 1,
+                "contrib": "pubnonce"
+            },
             "comment": "Public nonce from signer 1 is invalid due wrong tag, 0x04, in the first half"
         },
         {
             "pnonce_indices": [5, 1],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 0,
+                "contrib": "pubnonce"
+            },
             "comment": "Public nonce from signer 0 is invalid because the second half does not correspond to an X coordinate"
         },
         {
             "pnonce_indices": [6, 1],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 0,
+                "contrib": "pubnonce"
+            },
             "comment": "Public nonce from signer 0 is invalid because second half exceeds field size"
         }
     ]

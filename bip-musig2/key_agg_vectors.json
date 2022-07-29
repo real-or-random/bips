@@ -34,24 +34,42 @@
             "key_indices": [0, 3],
             "tweak_indices": [],
             "is_xonly": [],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 1,
+                "contrib": "pubkey"
+            },
             "comment": "Invalid public key"
         },
         {
             "key_indices": [0, 4],
             "tweak_indices": [],
             "is_xonly": [],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 1,
+                "contrib": "pubkey"
+            },
             "comment": "Public key exceeds field size"
         },
         {
             "key_indices": [0, 1],
             "tweak_indices": [0],
             "is_xonly": [true],
+            "error": {
+                "type": "value",
+                "message": "The tweak must be less than n."
+            },
             "comment": "Tweak is out of range"
         },
         {
             "key_indices": [5],
             "tweak_indices": [1],
             "is_xonly": [false],
+            "error": {
+                "type": "value",
+                "message": "The result of tweaking cannot be infinity."
+            },
             "comment": "Intermediate tweaking result is point at infinity"
         }
     ]

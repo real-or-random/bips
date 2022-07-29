@@ -396,6 +396,21 @@ def assertRaises(exception, try_fn, except_fn):
     except exception as e:
         assert(except_fn(e))
 
+def get_error_details(test_case):
+    error = test_case["error"]
+    if error["type"] == "invalid_contribution":
+        exception = InvalidContributionError
+        if "contrib" in error:
+            except_fn = lambda e: e.signer == error["signer"] and e.contrib == error["contrib"]
+        else:
+            except_fn = lambda e: e.signer == error["signer"]
+    elif error["type"] == "value":
+        exception = ValueError
+        except_fn = lambda e: str(e) == error["message"]
+    else:
+        raise RuntimeError(f"Invalid error type: {error['type']}")
+    return exception, except_fn
+
 def test_key_agg_vectors():
     with open('key_agg_vectors.json') as f:
         test_data = json.load(f)
@@ -411,14 +426,8 @@ def test_key_agg_vectors():
 
         assert get_pk(key_agg(pubkeys)) == expected
 
-    expected_errors = [
-        (InvalidContributionError, lambda e: e.signer == 1 and e.contrib == "pubkey"),
-        (InvalidContributionError, lambda e: e.signer == 1 and e.contrib == "pubkey"),
-        (ValueError, lambda e: str(e) == 'The tweak must be less than n.'),
-        (ValueError, lambda e: str(e) == 'The result of tweaking cannot be infinity.')
-    ]
     for i, test_case in enumerate(error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
 
         pubkeys = [X[i] for i in test_case["key_indices"]]
         tweaks = [T[i] for i in test_case["tweak_indices"]]
@@ -459,13 +468,8 @@ def test_nonce_agg_vectors():
         expected = bytes.fromhex(test_case["expected"])
         assert nonce_agg(pubnonces) == expected
 
-    expected_errors = [
-        (InvalidContributionError, lambda e: e.signer == 1 and e.contrib == "pubnonce"),
-        (InvalidContributionError, lambda e: e.signer == 0 and e.contrib == "pubnonce"),
-        (InvalidContributionError, lambda e: e.signer == 0 and e.contrib == "pubnonce")
-    ]
     for i, test_case in enumerate(error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
         pubnonces = [pnonce[i] for i in test_case["pnonce_indices"]]
         assertRaises(exception, lambda: nonce_agg(pubnonces), except_fn)
 
@@ -514,14 +518,8 @@ def test_sign_verify_vectors():
 
         assert partial_sig_verify(expected, pubnonces, pubkeys, [], [], msg, signer_index)
 
-    expected_errors = [
-        (InvalidContributionError, lambda e: e.signer == 2 and e.contrib == "pubkey"),
-        (InvalidContributionError, lambda e: e.signer == None and e.contrib == "aggnonce"),
-        (InvalidContributionError, lambda e: e.signer == None and e.contrib == "aggnonce"),
-        (InvalidContributionError, lambda e: e.signer == None and e.contrib == "aggnonce")
-    ]
     for i, test_case in enumerate(sign_error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
 
         pubkeys = [X[i] for i in test_case["key_indices"]]
         aggnonce = aggnonces[test_case["aggnonce_index"]]
@@ -539,12 +537,8 @@ def test_sign_verify_vectors():
 
         assert not partial_sig_verify(sig, pubnonces, pubkeys, [], [], msg, signer_index)
 
-    expected_errors = [
-        (InvalidContributionError, lambda e: e.signer == 0 and e.contrib == "pubnonce"),
-        (InvalidContributionError, lambda e: e.signer == 0 and e.contrib == "pubkey")
-    ]
     for i, test_case in enumerate(verify_error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
 
         sig = bytes.fromhex(test_case["sig"])
         pubkeys = [X[i] for i in test_case["key_indices"]]
@@ -597,11 +591,8 @@ def test_tweak_vectors():
 
         assert partial_sig_verify(expected, pubnonces, pubkeys, tweaks, is_xonly, msg, signer_index)
 
-    expected_errors = [
-        (ValueError, lambda e: str(e) == 'The tweak must be less than n.')
-    ]
     for i, test_case in enumerate(error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
 
         pubkeys = [X[i] for i in test_case["key_indices"]]
         pubnonces = [pnonce[i] for i in test_case["nonce_indices"]]
@@ -648,10 +639,10 @@ def test_sig_agg_vectors():
         assert schnorr_verify(msg, aggpk, sig)
 
     expected_errors = [
-        (InvalidContributionError, lambda e: lambda e: e.signer == 1)
+        (InvalidContributionError, lambda e: e.signer == 1)
     ]
     for i, test_case in enumerate(error_test_cases):
-        exception, except_fn = expected_errors[i]
+        exception, except_fn = get_error_details(test_case)
 
         pubnonces = [pnonce[i] for i in test_case["nonce_indices"]]
         aggnonce = nonce_agg(pubnonces)

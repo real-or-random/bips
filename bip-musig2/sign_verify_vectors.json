@@ -74,24 +74,44 @@
             "key_indices": [1, 0, 3],
             "aggnonce_index": 0,
             "msg_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 2,
+                "contrib": "pubkey"
+            },
             "comment": "Signer 2 provided an invalid public key"
         },
         {
             "key_indices": [1, 2, 0],
             "aggnonce_index": 2,
             "msg_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": null,
+                "contrib": "aggnonce"
+            },
             "comment": "Aggregate nonce is invalid due wrong tag, 0x04, in the first half"
         },
         {
             "key_indices": [1, 2, 0],
             "aggnonce_index": 3,
             "msg_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": null,
+                "contrib": "aggnonce"
+            },
             "comment": "Aggregate nonce is invalid because the second half does not correspond to an X coordinate"
         },
         {
             "key_indices": [1, 2, 0],
             "aggnonce_index": 4,
             "msg_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": null,
+                "contrib": "aggnonce"
+            },
             "comment": "Aggregate nonce is invalid because second half exceeds field size"
         }
     ],
@@ -128,6 +148,11 @@
             "nonce_indices": [4, 1, 2],
             "msg_index": 0,
             "signer_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 0,
+                "contrib": "pubnonce"
+            },
             "comment": "Invalid pubnonce"
         },
         {
@@ -136,6 +161,11 @@
             "nonce_indices": [0, 1, 2],
             "msg_index": 0,
             "signer_index": 0,
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 0,
+                "contrib": "pubkey"
+            },
             "comment": "Invalid pubkey"
         }
     ]

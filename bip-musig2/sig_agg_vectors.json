@@ -76,6 +76,10 @@
             "tweak_indices": [0, 1, 2],
             "is_xonly": [true, false, true],
             "psig_indices": [7, 8],
+            "error": {
+                "type": "invalid_contribution",
+                "signer": 1
+            },
             "comment": "Partial signature is invalid because it exceeds group size"
         }
     ]
