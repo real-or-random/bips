@@ -390,11 +390,16 @@ def fromhex_all(l):
 # Check that calling `try_fn` raises a `exception`. If `exception` is raised,
 # examine it with `except_fn`.
 def assertRaises(exception, try_fn, except_fn):
+    raised = False
     try:
         try_fn()
-        raise RuntimeError("Exception was _not_ raised in a test where it was required.")
     except exception as e:
+        raised = True
         assert(except_fn(e))
+    except BaseException:
+        raise AssertionError("Wrong exception raised in a test.")
+    if not raised:
+        raise AssertionError("Exception was _not_ raised in a test where it was required.")
 
 def get_error_details(test_case):
     error = test_case["error"]
