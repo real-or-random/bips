@@ -228,7 +228,7 @@ to create a 32-byte digest which can be passed to signing or verification
 (as for example done in [[bip-0341.mediawiki|BIP341]].)
 
 Since pre-hashing may not always be desirable,
-e.g., when actual messages are shorter than 32 bytes,<ref>Another reason to omit pre-hashing is to protect against certain types of cryptanalytic advances against the hash function used for pre-hashing: If pre-hashing is used, an attacker that can find collisions in the pre-hashing function can necessarily forge signatures under chosen-message attacks. If pre-hashing is not used, an attacker that can find collisions in SHA256 (as used inside the signature scheme) may not be able to forge signatures. However, this seeming advantage is mostly irrelevant in the context Bitcoin, which already relies on collision resistance of SHA256 in other places, e.g., for transaction hashes.</ref>
+e.g., when actual messages are shorter than 32 bytes,<ref>Another reason to omit pre-hashing is to protect against certain types of cryptanalytic advances against the hash function used for pre-hashing: If pre-hashing is used, an attacker that can find collisions in the pre-hashing function can necessarily forge signatures under chosen-message attacks. If pre-hashing is not used, an attacker that can find collisions in SHA256 (as used inside the signature scheme) may not be able to forge signatures. However, this seeming advantage is mostly irrelevant in the context of Bitcoin, which already relies on collision resistance of SHA256 in other places, e.g., for transaction hashes.</ref>
 the restriction to 32-byte messages has been lifted.
 We note that pre-hashing is recommended for performance reasons in applications that deal with large messages.
 If large messages are not pre-hashed,
@@ -291,7 +291,7 @@ The reference implementation is for demonstration purposes only and not to be us
 
 To help implementors understand updates to this BIP, we keep a list of substantial changes.
 
-* 2022-12: Allow messages of arbitrary size
+* 2023-04: Allow messages of arbitrary size
 
 == Footnotes ==
 
