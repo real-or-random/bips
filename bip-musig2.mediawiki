@@ -535,8 +535,20 @@ Implementers must avoid modifying the ''NonceGen'' algorithm without being fully
 
 One potential pitfall emerges when ''NonceGen'' is altered so the signer's public key ''pk'' is not part of the returned ''secnonce'' array.
 We make the signer provide ''pk'' at nonce generation time and write ''pk'' into the ''secnonce'' array (and check ''pk'' against ''IndividualPubkey(sk)'' in ''Sign'') to ensure that the public key of the signer is determined before sending out the ''pubnonce''.
-If the public key is not determined before sending out the ''pubnonce'', an adversary can forge a signature by influencing the individual tweak of a victim signer after seeing the ''pubnonce'' (see the [https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2022-October/021000.html bitcoin-dev mailing list post] and [https://github.com/jonasnick/musig2-tweaking writeup] for the details).
-Thus, implementations must guarantee that the public key of the signer is determined before sending out the ''pubnonce'' if they cannot rule out that the signer's individual key is tweaked (e.g., derived via BIP32) with a tweak known to the adversary (e.g., as in BIP32 unhardened derivation).<ref>The nonce generation algorithm as given in the [https://eprint.iacr.org/2020/1261 MuSig2 paper] does not take ''pk'' as an input (and does not store it in the ''secnonce''). However, the security model considered in the paper does not cover security for signers who tweak their individual keys.</ref>
+If the public key is not determined before sending out the ''pubnonce'', an adversary may forge a signature by influencing the individual tweak of a victim signer after seeing the ''pubnonce'' (see the [https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2022-October/021000.html bitcoin-dev mailing list post] and [https://github.com/jonasnick/musig2-tweaking writeup] for the details).
+Thus, implementations must guarantee that the public key of the signer is determined before sending out the ''pubnonce'' if they cannot rule out that the signer's individual key is tweaked (e.g., derived via BIP32) with a tweak known to the adversary (e.g., as in BIP32 unhardened derivation).<ref>The nonce generation algorithm as given in the [https://eprint.iacr.org/2020/1261 MuSig2 paper] does not take ''pk'' as an input (and does not store it in the ''secnonce''). However, the security model considered in the paper does not cover security for signers who tweak their individual keys.</ref><ref>In fact, it is not a problem that the attacker can influence the individual tweak of a victim signer after seeing the ''pubnonce'' if the signer uses nothing but the list of the public keys of all signers and the message to sign for determining what tweak to use.<br />
+More formally, consider modified algorithms ''NonceGen' '' and ''Sign' '', where ''NonceGen' '' does not take the individual public key of the signer as input and does not store it in pubnonce, and Sign' does not check read the individual public key from pubnonce and does not check it against the secret key taken as input.
+Then it suffices that for each invocation of ''NonceGen' '' with output ''(secnonce, pubnonce)'',
+a function ''fsk'' is determined before sending out ''pubnonce'',
+where ''fsk'' maps a pair consisting of a list of plain public keys and a message to a secret key,
+such that the secret key ''sk'' and the session context ''session_ctx''
+passed to the corresponding invocation of ''Sign'(secnonce, sk, session_ctx)'',
+adhere to the condition ''fsk(pk<sub>1..u</sub>, m) = sk'',
+where ''(_, _, pk<sub>1..u</sub>, _, _, _, m) = session_ctx''.<br />
+However, this requirement is complex and hard to enforce in implementations.
+The algorithms ''NonceGen'' and ''Sign'' specified in this BIP are effectively restricted to constant functions ''fsk(_, _) = sk''.
+In other words, their usage ensure that the secret key ''sk'' of the signers is determined entirely when invoking ''NonceGen'',
+which is enforced easily by letting ''NonceGen'' take the corresponding public key ''pk'' as input and checking  ''pk'' against ''IndividualPubKey(sk)'' in ''Sign''.</ref>
 
 We provide two modifications that are secure when applied correctly and may be useful in special circumstances, summarized in the following table.
 
