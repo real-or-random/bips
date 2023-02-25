@@ -541,10 +541,9 @@ More formally, consider modified algorithms ''NonceGen' '' and ''Sign' '', where
 Then it suffices that for each invocation of ''NonceGen' '' with output ''(secnonce, pubnonce)'',
 a function ''fsk'' is determined before sending out ''pubnonce'',
 where ''fsk'' maps a pair consisting of a list of plain public keys and a message to a secret key,
-such that the secret key ''sk'' and the session context ''session_ctx''
+such that the secret key ''sk'' and the session context ''session_ctx = (_, _, pk<sub>1..u</sub>, _, _, _, m)''
 passed to the corresponding invocation of ''Sign'(secnonce, sk, session_ctx)'',
-adhere to the condition ''fsk(pk<sub>1..u</sub>, m) = sk'',
-where ''(_, _, pk<sub>1..u</sub>, _, _, _, m) = session_ctx''.<br />
+adhere to the condition ''fsk(pk<sub>1..u</sub>, m) = sk''.<br />
 However, this requirement is complex and hard to enforce in implementations.
 The algorithms ''NonceGen'' and ''Sign'' specified in this BIP are effectively restricted to constant functions ''fsk(_, _) = sk''.
 In other words, their usage ensure that the secret key ''sk'' of the signers is determined entirely when invoking ''NonceGen'',
