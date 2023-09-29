@@ -372,20 +372,26 @@ def complete_handshake(peer, initiating, decoy_content_lengths=[]):
     # Send garbage terminator
     send(peer, peer.send_garbage_terminator)
     # Optionally send decoy packets after garbage terminator.
-    aad = peer.sent_garbage
+    send_aad = peer.sent_garbage
     for decoy_content_len in decoy_content_lengths:
-        send(v2_enc_packet(peer, decoy_content_len * b'\x00', aad=aad))
-        aad = b''
+        send(v2_enc_packet(peer, decoy_content_len * b'\x00', aad=send_aad))
+        send_aad = b''
     # Send version packet.
-    send(v2_enc_packet(peer, TRANSPORT_VERSION, aad=aad))
+    send(v2_enc_packet(peer, TRANSPORT_VERSION, aad=send_aad))
     # Skip garbage, until encountering garbage terminator.
     received_garbage = recv(peer, 16)
     for i in range(4096):
         if received_garbage[-16:] == peer.recv_garbage_terminator:
             # Receive, decode, and ignore version packet.
-            # This includes skipping decoys and authenticating the received garbage.
-            v2_receive_packet(peer, aad=received_garbage)
-            return
+            # While doing so, skip decoys and authenticate the received garbage.
+            receive_aad = received_garbage
+            while True
+                packet = v2_receive_packet(peer, aad=receive_add)
+                if packet is not None:
+                    # Non-decoy packet. This is the version packet, finish.
+                    return
+                # Only the first packet is expected to have non-empty AAD.
+                receive_aad = b''
         else:
             received_garbage += recv(peer, 1)
     # Garbage terminator was not seen after 4 KiB of garbage.
@@ -498,19 +504,19 @@ def v2_enc_packet(peer, contents, aad=b'', ignore=False):
 CHACHA20POLY1305_EXPANSION = 16
 
 def v2_receive_packet(peer, aad=b''):
-    while True:
-        enc_contents_len = receive(peer, LENGTH_FIELD_LEN)
-        contents_len = int.from_bytes(peer.recv_L.crypt(enc_contents_len), 'little')
-        aead_ciphertext = receive(peer, HEADER_LEN + contents_len + CHACHA20POLY1305_EXPANSION)
-        plaintext = peer.recv_P.decrypt(aad, aead_ciphertext)
-        if plaintext is None:
-            disconnect(peer)
-            break
-        # Only the first packet is expected to have non-empty AAD.
-        aad = b''
-        header = plaintext[:HEADER_LEN]
-        if not (header[0] & (1 << IGNORE_BIT_POS)):
-            return plaintext[HEADER_LEN:]
+    enc_contents_len = receive(peer, LENGTH_FIELD_LEN)
+    contents_len = int.from_bytes(peer.recv_L.crypt(enc_contents_len), 'little')
+    aead_ciphertext = receive(peer, HEADER_LEN + contents_len + CHACHA20POLY1305_EXPANSION)
+    plaintext = peer.recv_P.decrypt(aad, aead_ciphertext)
+    if plaintext is None:
+        disconnect(peer)
+        break
+    header = plaintext[:HEADER_LEN]
+    if header[0] & (1 << IGNORE_BIT_POS):
+        # Decoy packet. Not to be delivered to application layer.
+        return None
+    else:
+        return plaintext[HEADER_LEN:]
 </pre>
 
 ==== Performance ====
